@@ -726,7 +726,6 @@
   tags:
   - CCE-80666-1
   - CJIS-5.6.2.1.1
-  - DISA-STIG-RHEL-08-020220
   - NIST-800-171-3.5.8
   - NIST-800-53-IA-5(1)(e)
   - NIST-800-53-IA-5(f)
@@ -761,7 +760,6 @@
   tags:
   - CCE-80666-1
   - CJIS-5.6.2.1.1
-  - DISA-STIG-RHEL-08-020220
   - NIST-800-171-3.5.8
   - NIST-800-53-IA-5(1)(e)
   - NIST-800-53-IA-5(f)
@@ -789,7 +787,6 @@
   tags:
   - CCE-80666-1
   - CJIS-5.6.2.1.1
-  - DISA-STIG-RHEL-08-020220
   - NIST-800-171-3.5.8
   - NIST-800-53-IA-5(1)(e)
   - NIST-800-53-IA-5(f)
@@ -2016,7 +2013,7 @@
     manager: auto
   tags:
   - CCE-83386-3
-  - DISA-STIG-RHEL-08-010130
+  - DISA-STIG-RHEL-08-010131
   - accounts_password_pam_unix_rounds_system_auth
   - configure_strategy
   - low_complexity
@@ -2049,7 +2046,7 @@
   - '"pam" in ansible_facts.packages'
   tags:
   - CCE-83386-3
-  - DISA-STIG-RHEL-08-010130
+  - DISA-STIG-RHEL-08-010131
   - accounts_password_pam_unix_rounds_system_auth
   - configure_strategy
   - low_complexity

@@ -4,58 +4,6 @@
     - /etc/sudoers.d/
   register: sudoers
   tags:
-  - CCE-82197-5
-  - DISA-STIG-RHEL-08-010380
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-11
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-  - sudo_remove_nopasswd
-  when:
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - sudo_remove_nopasswd | bool
-
-- name: Remove lines containing NOPASSWD from sudoers files
-  replace:
-    regexp: (^(?!#).*[\s]+NOPASSWD[\s]*\:.*$)
-    replace: '# \g<1>'
-    path: '{{ item.path }}'
-    validate: /usr/sbin/visudo -cf %s
-  with_items:
-  - path: /etc/sudoers
-  - '{{ sudoers.files }}'
-  tags:
-  - CCE-82197-5
-  - DISA-STIG-RHEL-08-010380
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-11
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-  - sudo_remove_nopasswd
-  when:
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - sudo_remove_nopasswd | bool
-
-- name: Find /etc/sudoers.d/ files
-  find:
-    paths:
-    - /etc/sudoers.d/
-  register: sudoers
-  tags:
   - CCE-82202-3
   - DISA-STIG-RHEL-08-010381
   - NIST-800-53-CM-6(a)
@@ -102,6 +50,58 @@
   - restrict_strategy | bool
   - sudo_remove_no_authenticate | bool
 
+- name: Find /etc/sudoers.d/ files
+  find:
+    paths:
+    - /etc/sudoers.d/
+  register: sudoers
+  tags:
+  - CCE-82197-5
+  - DISA-STIG-RHEL-08-010380
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IA-11
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+  - sudo_remove_nopasswd
+  when:
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - sudo_remove_nopasswd | bool
+
+- name: Remove lines containing NOPASSWD from sudoers files
+  replace:
+    regexp: (^(?!#).*[\s]+NOPASSWD[\s]*\:.*$)
+    replace: '# \g<1>'
+    path: '{{ item.path }}'
+    validate: /usr/sbin/visudo -cf %s
+  with_items:
+  - path: /etc/sudoers
+  - '{{ sudoers.files }}'
+  tags:
+  - CCE-82197-5
+  - DISA-STIG-RHEL-08-010380
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IA-11
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+  - sudo_remove_nopasswd
+  when:
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - sudo_remove_nopasswd | bool
+
 - name: Ensure dnf-automatic is installed
   package:
     name: dnf-automatic
@@ -120,6 +120,202 @@
   - low_disruption | bool
   - medium_severity | bool
   - no_reboot_needed | bool
+
+- name: Configure dnf-automatic to Install Available Updates Automatically
+  ini_file:
+    dest: /etc/dnf/automatic.conf
+    section: commands
+    option: apply_updates
+    value: 'yes'
+    create: true
+  tags:
+  - CCE-82494-6
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-SI-2(5)
+  - NIST-800-53-SI-2(c)
+  - dnf-automatic_apply_updates
+  - low_complexity
+  - medium_disruption
+  - medium_severity
+  - no_reboot_needed
+  - unknown_strategy
+  when:
+  - low_complexity | bool
+  - medium_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - unknown_strategy | bool
+
+- name: Configure dnf-automatic to Install Only Security Updates
+  ini_file:
+    dest: /etc/dnf/automatic.conf
+    section: commands
+    option: upgrade_type
+    value: security
+    create: true
+  tags:
+  - CCE-82267-6
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-SI-2(5)
+  - NIST-800-53-SI-2(c)
+  - dnf-automatic_security_updates_only
+  - low_complexity
+  - low_severity
+  - medium_disruption
+  - no_reboot_needed
+  - unknown_strategy
+  when:
+  - low_complexity | bool
+  - low_severity | bool
+  - medium_disruption | bool
+  - no_reboot_needed | bool
+  - unknown_strategy | bool
+
+- name: Gather the package facts
+  package_facts:
+    manager: auto
+  tags:
+  - CCE-80790-9
+  - CJIS-5.10.4.1
+  - DISA-STIG-RHEL-08-010370
+  - NIST-800-171-3.4.8
+  - NIST-800-53-CM-11(a)
+  - NIST-800-53-CM-11(b)
+  - NIST-800-53-CM-5(3)
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-SA-12
+  - NIST-800-53-SA-12(10)
+  - NIST-800-53-SC-12
+  - NIST-800-53-SC-12(3)
+  - NIST-800-53-SI-7
+  - PCI-DSS-Req-6.2
+  - ensure_gpgcheck_globally_activated
+  - high_severity
+  - low_complexity
+  - medium_disruption
+  - no_reboot_needed
+  - unknown_strategy
+  when:
+  - ensure_gpgcheck_globally_activated | bool
+  - high_severity | bool
+  - low_complexity | bool
+  - medium_disruption | bool
+  - no_reboot_needed | bool
+  - unknown_strategy | bool
+
+- name: Check existence of yum on Fedora
+  stat:
+    path: /etc/yum.conf
+  register: yum_config_file
+  check_mode: false
+  when:
+  - ensure_gpgcheck_globally_activated | bool
+  - high_severity | bool
+  - low_complexity | bool
+  - medium_disruption | bool
+  - no_reboot_needed | bool
+  - unknown_strategy | bool
+  - '"yum" in ansible_facts.packages'
+  - ansible_distribution == "Fedora"
+  tags:
+  - CCE-80790-9
+  - CJIS-5.10.4.1
+  - DISA-STIG-RHEL-08-010370
+  - NIST-800-171-3.4.8
+  - NIST-800-53-CM-11(a)
+  - NIST-800-53-CM-11(b)
+  - NIST-800-53-CM-5(3)
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-SA-12
+  - NIST-800-53-SA-12(10)
+  - NIST-800-53-SC-12
+  - NIST-800-53-SC-12(3)
+  - NIST-800-53-SI-7
+  - PCI-DSS-Req-6.2
+  - ensure_gpgcheck_globally_activated
+  - high_severity
+  - low_complexity
+  - medium_disruption
+  - no_reboot_needed
+  - unknown_strategy
+
+- name: Ensure GPG check is globally activated (yum)
+  ini_file:
+    dest: /etc/yum.conf
+    section: main
+    option: gpgcheck
+    value: 1
+    no_extra_spaces: true
+    create: false
+  when:
+  - ensure_gpgcheck_globally_activated | bool
+  - high_severity | bool
+  - low_complexity | bool
+  - medium_disruption | bool
+  - no_reboot_needed | bool
+  - unknown_strategy | bool
+  - '"yum" in ansible_facts.packages'
+  - (ansible_distribution == "RedHat" or ansible_distribution == "CentOS" or ansible_distribution == "Scientific" or yum_config_file.stat.exists)
+  tags:
+  - CCE-80790-9
+  - CJIS-5.10.4.1
+  - DISA-STIG-RHEL-08-010370
+  - NIST-800-171-3.4.8
+  - NIST-800-53-CM-11(a)
+  - NIST-800-53-CM-11(b)
+  - NIST-800-53-CM-5(3)
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-SA-12
+  - NIST-800-53-SA-12(10)
+  - NIST-800-53-SC-12
+  - NIST-800-53-SC-12(3)
+  - NIST-800-53-SI-7
+  - PCI-DSS-Req-6.2
+  - ensure_gpgcheck_globally_activated
+  - high_severity
+  - low_complexity
+  - medium_disruption
+  - no_reboot_needed
+  - unknown_strategy
+
+- name: Ensure GPG check is globally activated (dnf)
+  ini_file:
+    dest: /etc/dnf/dnf.conf
+    section: main
+    option: gpgcheck
+    value: 1
+    no_extra_spaces: true
+    create: false
+  when:
+  - ensure_gpgcheck_globally_activated | bool
+  - high_severity | bool
+  - low_complexity | bool
+  - medium_disruption | bool
+  - no_reboot_needed | bool
+  - unknown_strategy | bool
+  - '"yum" in ansible_facts.packages'
+  - ansible_distribution == "Fedora"
+  tags:
+  - CCE-80790-9
+  - CJIS-5.10.4.1
+  - DISA-STIG-RHEL-08-010370
+  - NIST-800-171-3.4.8
+  - NIST-800-53-CM-11(a)
+  - NIST-800-53-CM-11(b)
+  - NIST-800-53-CM-5(3)
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-SA-12
+  - NIST-800-53-SA-12(10)
+  - NIST-800-53-SC-12
+  - NIST-800-53-SC-12(3)
+  - NIST-800-53-SI-7
+  - PCI-DSS-Req-6.2
+  - ensure_gpgcheck_globally_activated
+  - high_severity
+  - low_complexity
+  - medium_disruption
+  - no_reboot_needed
+  - unknown_strategy
 
 - name: Gather the package facts
   package_facts:
@@ -466,56 +662,6 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Configure dnf-automatic to Install Available Updates Automatically
-  ini_file:
-    dest: /etc/dnf/automatic.conf
-    section: commands
-    option: apply_updates
-    value: 'yes'
-    create: true
-  tags:
-  - CCE-82494-6
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-SI-2(5)
-  - NIST-800-53-SI-2(c)
-  - dnf-automatic_apply_updates
-  - low_complexity
-  - medium_disruption
-  - medium_severity
-  - no_reboot_needed
-  - unknown_strategy
-  when:
-  - low_complexity | bool
-  - medium_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - unknown_strategy | bool
-
-- name: Configure dnf-automatic to Install Only Security Updates
-  ini_file:
-    dest: /etc/dnf/automatic.conf
-    section: commands
-    option: upgrade_type
-    value: security
-    create: true
-  tags:
-  - CCE-82267-6
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-SI-2(5)
-  - NIST-800-53-SI-2(c)
-  - dnf-automatic_security_updates_only
-  - low_complexity
-  - low_severity
-  - medium_disruption
-  - no_reboot_needed
-  - unknown_strategy
-  when:
-  - low_complexity | bool
-  - low_severity | bool
-  - medium_disruption | bool
-  - no_reboot_needed | bool
-  - unknown_strategy | bool
-
 - name: Security patches are up to date
   package:
     name: '*'
@@ -573,355 +719,6 @@
   - low_disruption | bool
   - medium_severity | bool
   - no_reboot_needed | bool
-
-- name: Gather the package facts
-  package_facts:
-    manager: auto
-  tags:
-  - CCE-80790-9
-  - CJIS-5.10.4.1
-  - DISA-STIG-RHEL-08-010370
-  - NIST-800-171-3.4.8
-  - NIST-800-53-CM-11(a)
-  - NIST-800-53-CM-11(b)
-  - NIST-800-53-CM-5(3)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-SA-12
-  - NIST-800-53-SA-12(10)
-  - NIST-800-53-SC-12
-  - NIST-800-53-SC-12(3)
-  - NIST-800-53-SI-7
-  - PCI-DSS-Req-6.2
-  - ensure_gpgcheck_globally_activated
-  - high_severity
-  - low_complexity
-  - medium_disruption
-  - no_reboot_needed
-  - unknown_strategy
-  when:
-  - ensure_gpgcheck_globally_activated | bool
-  - high_severity | bool
-  - low_complexity | bool
-  - medium_disruption | bool
-  - no_reboot_needed | bool
-  - unknown_strategy | bool
-
-- name: Check existence of yum on Fedora
-  stat:
-    path: /etc/yum.conf
-  register: yum_config_file
-  check_mode: false
-  when:
-  - ensure_gpgcheck_globally_activated | bool
-  - high_severity | bool
-  - low_complexity | bool
-  - medium_disruption | bool
-  - no_reboot_needed | bool
-  - unknown_strategy | bool
-  - '"yum" in ansible_facts.packages'
-  - ansible_distribution == "Fedora"
-  tags:
-  - CCE-80790-9
-  - CJIS-5.10.4.1
-  - DISA-STIG-RHEL-08-010370
-  - NIST-800-171-3.4.8
-  - NIST-800-53-CM-11(a)
-  - NIST-800-53-CM-11(b)
-  - NIST-800-53-CM-5(3)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-SA-12
-  - NIST-800-53-SA-12(10)
-  - NIST-800-53-SC-12
-  - NIST-800-53-SC-12(3)
-  - NIST-800-53-SI-7
-  - PCI-DSS-Req-6.2
-  - ensure_gpgcheck_globally_activated
-  - high_severity
-  - low_complexity
-  - medium_disruption
-  - no_reboot_needed
-  - unknown_strategy
-
-- name: Ensure GPG check is globally activated (yum)
-  ini_file:
-    dest: /etc/yum.conf
-    section: main
-    option: gpgcheck
-    value: 1
-    no_extra_spaces: true
-    create: false
-  when:
-  - ensure_gpgcheck_globally_activated | bool
-  - high_severity | bool
-  - low_complexity | bool
-  - medium_disruption | bool
-  - no_reboot_needed | bool
-  - unknown_strategy | bool
-  - '"yum" in ansible_facts.packages'
-  - (ansible_distribution == "RedHat" or ansible_distribution == "CentOS" or ansible_distribution == "Scientific" or yum_config_file.stat.exists)
-  tags:
-  - CCE-80790-9
-  - CJIS-5.10.4.1
-  - DISA-STIG-RHEL-08-010370
-  - NIST-800-171-3.4.8
-  - NIST-800-53-CM-11(a)
-  - NIST-800-53-CM-11(b)
-  - NIST-800-53-CM-5(3)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-SA-12
-  - NIST-800-53-SA-12(10)
-  - NIST-800-53-SC-12
-  - NIST-800-53-SC-12(3)
-  - NIST-800-53-SI-7
-  - PCI-DSS-Req-6.2
-  - ensure_gpgcheck_globally_activated
-  - high_severity
-  - low_complexity
-  - medium_disruption
-  - no_reboot_needed
-  - unknown_strategy
-
-- name: Ensure GPG check is globally activated (dnf)
-  ini_file:
-    dest: /etc/dnf/dnf.conf
-    section: main
-    option: gpgcheck
-    value: 1
-    no_extra_spaces: true
-    create: false
-  when:
-  - ensure_gpgcheck_globally_activated | bool
-  - high_severity | bool
-  - low_complexity | bool
-  - medium_disruption | bool
-  - no_reboot_needed | bool
-  - unknown_strategy | bool
-  - '"yum" in ansible_facts.packages'
-  - ansible_distribution == "Fedora"
-  tags:
-  - CCE-80790-9
-  - CJIS-5.10.4.1
-  - DISA-STIG-RHEL-08-010370
-  - NIST-800-171-3.4.8
-  - NIST-800-53-CM-11(a)
-  - NIST-800-53-CM-11(b)
-  - NIST-800-53-CM-5(3)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-SA-12
-  - NIST-800-53-SA-12(10)
-  - NIST-800-53-SC-12
-  - NIST-800-53-SC-12(3)
-  - NIST-800-53-SI-7
-  - PCI-DSS-Req-6.2
-  - ensure_gpgcheck_globally_activated
-  - high_severity
-  - low_complexity
-  - medium_disruption
-  - no_reboot_needed
-  - unknown_strategy
-
-- name: Gather the package facts
-  package_facts:
-    manager: auto
-  tags:
-  - CCE-80670-3
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020014
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.7
-  - accounts_passwords_pam_faillock_unlock_time
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-  when:
-  - accounts_passwords_pam_faillock_unlock_time | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-
-- name: Add auth pam_faillock preauth unlock_time before pam_unix.so
-  pamd:
-    name: '{{ item }}'
-    type: auth
-    control: sufficient
-    module_path: pam_unix.so
-    new_type: auth
-    new_control: required
-    new_module_path: pam_faillock.so
-    module_arguments: preauth silent unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time }}
-    state: before
-  loop:
-  - system-auth
-  - password-auth
-  when:
-  - accounts_passwords_pam_faillock_unlock_time | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80670-3
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020014
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.7
-  - accounts_passwords_pam_faillock_unlock_time
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Add unlock_time argument to pam_faillock preauth
-  pamd:
-    name: '{{ item }}'
-    type: auth
-    control: required
-    module_path: pam_faillock.so
-    module_arguments: preauth silent unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time }}
-    state: args_present
-  loop:
-  - system-auth
-  - password-auth
-  when:
-  - accounts_passwords_pam_faillock_unlock_time | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80670-3
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020014
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.7
-  - accounts_passwords_pam_faillock_unlock_time
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Add auth pam_faillock authfail unlock_interval after pam_unix.so
-  pamd:
-    name: '{{ item }}'
-    type: auth
-    control: sufficient
-    module_path: pam_unix.so
-    new_type: auth
-    new_control: '[default=die]'
-    new_module_path: pam_faillock.so
-    module_arguments: authfail unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time }}
-    state: after
-  loop:
-  - system-auth
-  - password-auth
-  when:
-  - accounts_passwords_pam_faillock_unlock_time | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80670-3
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020014
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.7
-  - accounts_passwords_pam_faillock_unlock_time
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Add unlock_time argument to auth pam_faillock authfail
-  pamd:
-    name: '{{ item }}'
-    type: auth
-    control: '[default=die]'
-    module_path: pam_faillock.so
-    module_arguments: authfail unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time }}
-    state: args_present
-  loop:
-  - system-auth
-  - password-auth
-  when:
-  - accounts_passwords_pam_faillock_unlock_time | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80670-3
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020014
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.7
-  - accounts_passwords_pam_faillock_unlock_time
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Add account pam_faillock before pam_unix.so
-  pamd:
-    name: '{{ item }}'
-    type: account
-    control: required
-    module_path: pam_unix.so
-    new_type: account
-    new_control: required
-    new_module_path: pam_faillock.so
-    state: before
-  loop:
-  - system-auth
-  - password-auth
-  when:
-  - accounts_passwords_pam_faillock_unlock_time | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80670-3
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020014
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.7
-  - accounts_passwords_pam_faillock_unlock_time
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
 
 - name: Gather the package facts
   package_facts:
@@ -1003,197 +800,6 @@
   - medium_disruption
   - medium_severity
   - no_reboot_needed
-
-- name: Gather the package facts
-  package_facts:
-    manager: auto
-  tags:
-  - CCE-80668-7
-  - DISA-STIG-RHEL-08-020022
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(c)
-  - accounts_passwords_pam_faillock_deny_root
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-  when:
-  - accounts_passwords_pam_faillock_deny_root | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-
-- name: Add auth pam_faillock preauth even_deny_root before pam_unix.so
-  pamd:
-    name: '{{ item }}'
-    type: auth
-    control: sufficient
-    module_path: pam_unix.so
-    new_type: auth
-    new_control: required
-    new_module_path: pam_faillock.so
-    module_arguments: preauth silent even_deny_root
-    state: before
-  loop:
-  - system-auth
-  - password-auth
-  when:
-  - accounts_passwords_pam_faillock_deny_root | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80668-7
-  - DISA-STIG-RHEL-08-020022
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(c)
-  - accounts_passwords_pam_faillock_deny_root
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Add even_deny_root argument to auth pam_faillock preauth
-  pamd:
-    name: '{{ item }}'
-    type: auth
-    control: required
-    module_path: pam_faillock.so
-    module_arguments: preauth silent even_deny_root
-    state: args_present
-  loop:
-  - system-auth
-  - password-auth
-  when:
-  - accounts_passwords_pam_faillock_deny_root | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80668-7
-  - DISA-STIG-RHEL-08-020022
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(c)
-  - accounts_passwords_pam_faillock_deny_root
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Add auth pam_faillock authfail even_deny_root after pam_unix.so
-  pamd:
-    name: '{{ item }}'
-    type: auth
-    control: sufficient
-    module_path: pam_unix.so
-    new_type: auth
-    new_control: '[default=die]'
-    new_module_path: pam_faillock.so
-    module_arguments: authfail even_deny_root
-    state: after
-  loop:
-  - system-auth
-  - password-auth
-  when:
-  - accounts_passwords_pam_faillock_deny_root | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80668-7
-  - DISA-STIG-RHEL-08-020022
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(c)
-  - accounts_passwords_pam_faillock_deny_root
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Add even_deny_root argument to auth pam_faillock authfail
-  pamd:
-    name: '{{ item }}'
-    type: auth
-    control: '[default=die]'
-    module_path: pam_faillock.so
-    module_arguments: authfail even_deny_root
-    state: args_present
-  loop:
-  - system-auth
-  - password-auth
-  when:
-  - accounts_passwords_pam_faillock_deny_root | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80668-7
-  - DISA-STIG-RHEL-08-020022
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(c)
-  - accounts_passwords_pam_faillock_deny_root
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Add account pam_faillock before pam_unix.so
-  pamd:
-    name: '{{ item }}'
-    type: account
-    control: required
-    module_path: pam_unix.so
-    new_type: account
-    new_control: required
-    new_module_path: pam_faillock.so
-    state: before
-  loop:
-  - system-auth
-  - password-auth
-  when:
-  - accounts_passwords_pam_faillock_deny_root | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80668-7
-  - DISA-STIG-RHEL-08-020022
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(c)
-  - accounts_passwords_pam_faillock_deny_root
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
 
 - name: Gather the package facts
   package_facts:
@@ -1403,6 +1009,197 @@
   package_facts:
     manager: auto
   tags:
+  - CCE-80668-7
+  - DISA-STIG-RHEL-08-020022
+  - NIST-800-53-AC-7(b)
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IA-5(c)
+  - accounts_passwords_pam_faillock_deny_root
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+  when:
+  - accounts_passwords_pam_faillock_deny_root | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+
+- name: Add auth pam_faillock preauth even_deny_root before pam_unix.so
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: sufficient
+    module_path: pam_unix.so
+    new_type: auth
+    new_control: required
+    new_module_path: pam_faillock.so
+    module_arguments: preauth silent even_deny_root
+    state: before
+  loop:
+  - system-auth
+  - password-auth
+  when:
+  - accounts_passwords_pam_faillock_deny_root | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - '"pam" in ansible_facts.packages'
+  tags:
+  - CCE-80668-7
+  - DISA-STIG-RHEL-08-020022
+  - NIST-800-53-AC-7(b)
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IA-5(c)
+  - accounts_passwords_pam_faillock_deny_root
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Add even_deny_root argument to auth pam_faillock preauth
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: required
+    module_path: pam_faillock.so
+    module_arguments: preauth silent even_deny_root
+    state: args_present
+  loop:
+  - system-auth
+  - password-auth
+  when:
+  - accounts_passwords_pam_faillock_deny_root | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - '"pam" in ansible_facts.packages'
+  tags:
+  - CCE-80668-7
+  - DISA-STIG-RHEL-08-020022
+  - NIST-800-53-AC-7(b)
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IA-5(c)
+  - accounts_passwords_pam_faillock_deny_root
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Add auth pam_faillock authfail even_deny_root after pam_unix.so
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: sufficient
+    module_path: pam_unix.so
+    new_type: auth
+    new_control: '[default=die]'
+    new_module_path: pam_faillock.so
+    module_arguments: authfail even_deny_root
+    state: after
+  loop:
+  - system-auth
+  - password-auth
+  when:
+  - accounts_passwords_pam_faillock_deny_root | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - '"pam" in ansible_facts.packages'
+  tags:
+  - CCE-80668-7
+  - DISA-STIG-RHEL-08-020022
+  - NIST-800-53-AC-7(b)
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IA-5(c)
+  - accounts_passwords_pam_faillock_deny_root
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Add even_deny_root argument to auth pam_faillock authfail
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: '[default=die]'
+    module_path: pam_faillock.so
+    module_arguments: authfail even_deny_root
+    state: args_present
+  loop:
+  - system-auth
+  - password-auth
+  when:
+  - accounts_passwords_pam_faillock_deny_root | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - '"pam" in ansible_facts.packages'
+  tags:
+  - CCE-80668-7
+  - DISA-STIG-RHEL-08-020022
+  - NIST-800-53-AC-7(b)
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IA-5(c)
+  - accounts_passwords_pam_faillock_deny_root
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Add account pam_faillock before pam_unix.so
+  pamd:
+    name: '{{ item }}'
+    type: account
+    control: required
+    module_path: pam_unix.so
+    new_type: account
+    new_control: required
+    new_module_path: pam_faillock.so
+    state: before
+  loop:
+  - system-auth
+  - password-auth
+  when:
+  - accounts_passwords_pam_faillock_deny_root | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - '"pam" in ansible_facts.packages'
+  tags:
+  - CCE-80668-7
+  - DISA-STIG-RHEL-08-020022
+  - NIST-800-53-AC-7(b)
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IA-5(c)
+  - accounts_passwords_pam_faillock_deny_root
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Gather the package facts
+  package_facts:
+    manager: auto
+  tags:
   - CCE-80669-5
   - DISA-STIG-RHEL-08-020012
   - NIST-800-53-AC-7(a)
@@ -1588,6 +1385,209 @@
   package_facts:
     manager: auto
   tags:
+  - CCE-80670-3
+  - CJIS-5.5.3
+  - DISA-STIG-RHEL-08-020014
+  - NIST-800-171-3.1.8
+  - NIST-800-53-AC-7(b)
+  - NIST-800-53-CM-6(a)
+  - PCI-DSS-Req-8.1.7
+  - accounts_passwords_pam_faillock_unlock_time
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+  when:
+  - accounts_passwords_pam_faillock_unlock_time | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+
+- name: Add auth pam_faillock preauth unlock_time before pam_unix.so
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: sufficient
+    module_path: pam_unix.so
+    new_type: auth
+    new_control: required
+    new_module_path: pam_faillock.so
+    module_arguments: preauth silent unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time }}
+    state: before
+  loop:
+  - system-auth
+  - password-auth
+  when:
+  - accounts_passwords_pam_faillock_unlock_time | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - '"pam" in ansible_facts.packages'
+  tags:
+  - CCE-80670-3
+  - CJIS-5.5.3
+  - DISA-STIG-RHEL-08-020014
+  - NIST-800-171-3.1.8
+  - NIST-800-53-AC-7(b)
+  - NIST-800-53-CM-6(a)
+  - PCI-DSS-Req-8.1.7
+  - accounts_passwords_pam_faillock_unlock_time
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Add unlock_time argument to pam_faillock preauth
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: required
+    module_path: pam_faillock.so
+    module_arguments: preauth silent unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time }}
+    state: args_present
+  loop:
+  - system-auth
+  - password-auth
+  when:
+  - accounts_passwords_pam_faillock_unlock_time | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - '"pam" in ansible_facts.packages'
+  tags:
+  - CCE-80670-3
+  - CJIS-5.5.3
+  - DISA-STIG-RHEL-08-020014
+  - NIST-800-171-3.1.8
+  - NIST-800-53-AC-7(b)
+  - NIST-800-53-CM-6(a)
+  - PCI-DSS-Req-8.1.7
+  - accounts_passwords_pam_faillock_unlock_time
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Add auth pam_faillock authfail unlock_interval after pam_unix.so
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: sufficient
+    module_path: pam_unix.so
+    new_type: auth
+    new_control: '[default=die]'
+    new_module_path: pam_faillock.so
+    module_arguments: authfail unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time }}
+    state: after
+  loop:
+  - system-auth
+  - password-auth
+  when:
+  - accounts_passwords_pam_faillock_unlock_time | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - '"pam" in ansible_facts.packages'
+  tags:
+  - CCE-80670-3
+  - CJIS-5.5.3
+  - DISA-STIG-RHEL-08-020014
+  - NIST-800-171-3.1.8
+  - NIST-800-53-AC-7(b)
+  - NIST-800-53-CM-6(a)
+  - PCI-DSS-Req-8.1.7
+  - accounts_passwords_pam_faillock_unlock_time
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Add unlock_time argument to auth pam_faillock authfail
+  pamd:
+    name: '{{ item }}'
+    type: auth
+    control: '[default=die]'
+    module_path: pam_faillock.so
+    module_arguments: authfail unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time }}
+    state: args_present
+  loop:
+  - system-auth
+  - password-auth
+  when:
+  - accounts_passwords_pam_faillock_unlock_time | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - '"pam" in ansible_facts.packages'
+  tags:
+  - CCE-80670-3
+  - CJIS-5.5.3
+  - DISA-STIG-RHEL-08-020014
+  - NIST-800-171-3.1.8
+  - NIST-800-53-AC-7(b)
+  - NIST-800-53-CM-6(a)
+  - PCI-DSS-Req-8.1.7
+  - accounts_passwords_pam_faillock_unlock_time
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Add account pam_faillock before pam_unix.so
+  pamd:
+    name: '{{ item }}'
+    type: account
+    control: required
+    module_path: pam_unix.so
+    new_type: account
+    new_control: required
+    new_module_path: pam_faillock.so
+    state: before
+  loop:
+  - system-auth
+  - password-auth
+  when:
+  - accounts_passwords_pam_faillock_unlock_time | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - restrict_strategy | bool
+  - '"pam" in ansible_facts.packages'
+  tags:
+  - CCE-80670-3
+  - CJIS-5.5.3
+  - DISA-STIG-RHEL-08-020014
+  - NIST-800-171-3.1.8
+  - NIST-800-53-AC-7(b)
+  - NIST-800-53-CM-6(a)
+  - PCI-DSS-Req-8.1.7
+  - accounts_passwords_pam_faillock_unlock_time
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - restrict_strategy
+
+- name: Gather the package facts
+  package_facts:
+    manager: auto
+  tags:
   - CCE-80653-9
   - DISA-STIG-RHEL-08-020130
   - NIST-800-53-CM-6(a)
@@ -1632,112 +1632,6 @@
   - NIST-800-53-IA-5(c)
   - PCI-DSS-Req-8.2.3
   - accounts_password_pam_dcredit
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Gather the package facts
-  package_facts:
-    manager: auto
-  tags:
-  - CCE-80665-3
-  - DISA-STIG-RHEL-08-020110
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(1)(a)
-  - NIST-800-53-IA-5(4)
-  - NIST-800-53-IA-5(c)
-  - PCI-DSS-Req-8.2.3
-  - accounts_password_pam_ucredit
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-  when:
-  - accounts_password_pam_ucredit | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-
-- name: Ensure PAM variable ucredit is set accordingly
-  lineinfile:
-    create: true
-    dest: /etc/security/pwquality.conf
-    regexp: ^#?\s*ucredit
-    line: ucredit = {{ var_password_pam_ucredit }}
-  when:
-  - accounts_password_pam_ucredit | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80665-3
-  - DISA-STIG-RHEL-08-020110
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(1)(a)
-  - NIST-800-53-IA-5(4)
-  - NIST-800-53-IA-5(c)
-  - PCI-DSS-Req-8.2.3
-  - accounts_password_pam_ucredit
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Gather the package facts
-  package_facts:
-    manager: auto
-  tags:
-  - CCE-80663-8
-  - DISA-STIG-RHEL-08-020280
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(1)(a)
-  - NIST-800-53-IA-5(4)
-  - NIST-800-53-IA-5(c)
-  - accounts_password_pam_ocredit
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-  when:
-  - accounts_password_pam_ocredit | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-
-- name: Ensure PAM variable ocredit is set accordingly
-  lineinfile:
-    create: true
-    dest: /etc/security/pwquality.conf
-    regexp: ^#?\s*ocredit
-    line: ocredit = {{ var_password_pam_ocredit }}
-  when:
-  - accounts_password_pam_ocredit | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80663-8
-  - DISA-STIG-RHEL-08-020280
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(1)(a)
-  - NIST-800-53-IA-5(4)
-  - NIST-800-53-IA-5(c)
-  - accounts_password_pam_ocredit
   - low_complexity
   - low_disruption
   - medium_severity
@@ -1858,93 +1752,107 @@
   package_facts:
     manager: auto
   tags:
-  - CCE-83386-3
-  - DISA-STIG-RHEL-08-010130
-  - accounts_password_pam_unix_rounds_system_auth
-  - configure_strategy
+  - CCE-80663-8
+  - DISA-STIG-RHEL-08-020280
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IA-5(1)(a)
+  - NIST-800-53-IA-5(4)
+  - NIST-800-53-IA-5(c)
+  - accounts_password_pam_ocredit
   - low_complexity
-  - medium_disruption
+  - low_disruption
   - medium_severity
   - no_reboot_needed
+  - restrict_strategy
   when:
-  - accounts_password_pam_unix_rounds_system_auth | bool
-  - configure_strategy | bool
+  - accounts_password_pam_ocredit | bool
   - low_complexity | bool
-  - medium_disruption | bool
+  - low_disruption | bool
   - medium_severity | bool
   - no_reboot_needed | bool
+  - restrict_strategy | bool
 
-- name: Configure number of system-auth password hashing rounds in pam_unix.so
-  pamd:
-    name: system-auth
-    type: password
-    control: sufficient
-    module_path: pam_unix.so
-    module_arguments: rounds={{ var_password_pam_unix_rounds }}
-    state: args_present
+- name: Ensure PAM variable ocredit is set accordingly
+  lineinfile:
+    create: true
+    dest: /etc/security/pwquality.conf
+    regexp: ^#?\s*ocredit
+    line: ocredit = {{ var_password_pam_ocredit }}
   when:
-  - accounts_password_pam_unix_rounds_system_auth | bool
-  - configure_strategy | bool
+  - accounts_password_pam_ocredit | bool
   - low_complexity | bool
-  - medium_disruption | bool
+  - low_disruption | bool
   - medium_severity | bool
   - no_reboot_needed | bool
+  - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
   tags:
-  - CCE-83386-3
-  - DISA-STIG-RHEL-08-010130
-  - accounts_password_pam_unix_rounds_system_auth
-  - configure_strategy
+  - CCE-80663-8
+  - DISA-STIG-RHEL-08-020280
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IA-5(1)(a)
+  - NIST-800-53-IA-5(4)
+  - NIST-800-53-IA-5(c)
+  - accounts_password_pam_ocredit
   - low_complexity
-  - medium_disruption
+  - low_disruption
   - medium_severity
   - no_reboot_needed
+  - restrict_strategy
 
 - name: Gather the package facts
   package_facts:
     manager: auto
   tags:
-  - CCE-83403-6
-  - DISA-STIG-RHEL-08-010130
-  - accounts_password_pam_unix_rounds_password_auth
-  - configure_strategy
+  - CCE-80665-3
+  - DISA-STIG-RHEL-08-020110
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IA-5(1)(a)
+  - NIST-800-53-IA-5(4)
+  - NIST-800-53-IA-5(c)
+  - PCI-DSS-Req-8.2.3
+  - accounts_password_pam_ucredit
   - low_complexity
-  - medium_disruption
+  - low_disruption
   - medium_severity
   - no_reboot_needed
+  - restrict_strategy
   when:
-  - accounts_password_pam_unix_rounds_password_auth | bool
-  - configure_strategy | bool
+  - accounts_password_pam_ucredit | bool
   - low_complexity | bool
-  - medium_disruption | bool
+  - low_disruption | bool
   - medium_severity | bool
   - no_reboot_needed | bool
+  - restrict_strategy | bool
 
-- name: Configure number of password-auth password hashing rounds in pam_unix.so
-  pamd:
-    name: password-auth
-    type: password
-    control: sufficient
-    module_path: pam_unix.so
-    module_arguments: rounds={{ var_password_pam_unix_rounds }}
-    state: args_present
+- name: Ensure PAM variable ucredit is set accordingly
+  lineinfile:
+    create: true
+    dest: /etc/security/pwquality.conf
+    regexp: ^#?\s*ucredit
+    line: ucredit = {{ var_password_pam_ucredit }}
   when:
-  - accounts_password_pam_unix_rounds_password_auth | bool
-  - configure_strategy | bool
+  - accounts_password_pam_ucredit | bool
   - low_complexity | bool
-  - medium_disruption | bool
+  - low_disruption | bool
   - medium_severity | bool
   - no_reboot_needed | bool
+  - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
   tags:
-  - CCE-83403-6
-  - DISA-STIG-RHEL-08-010130
-  - accounts_password_pam_unix_rounds_password_auth
-  - configure_strategy
+  - CCE-80665-3
+  - DISA-STIG-RHEL-08-020110
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-IA-5(1)(a)
+  - NIST-800-53-IA-5(4)
+  - NIST-800-53-IA-5(c)
+  - PCI-DSS-Req-8.2.3
+  - accounts_password_pam_ucredit
   - low_complexity
-  - medium_disruption
+  - low_disruption
   - medium_severity
   - no_reboot_needed
+  - restrict_strategy
 
 - name: Gather the package facts
   package_facts:
@@ -2057,6 +1965,98 @@
   - no_reboot_needed
   - restrict_strategy
 
+- name: Gather the package facts
+  package_facts:
+    manager: auto
+  tags:
+  - CCE-83403-6
+  - DISA-STIG-RHEL-08-010130
+  - accounts_password_pam_unix_rounds_password_auth
+  - configure_strategy
+  - low_complexity
+  - medium_disruption
+  - medium_severity
+  - no_reboot_needed
+  when:
+  - accounts_password_pam_unix_rounds_password_auth | bool
+  - configure_strategy | bool
+  - low_complexity | bool
+  - medium_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+
+- name: Configure number of password-auth password hashing rounds in pam_unix.so
+  pamd:
+    name: password-auth
+    type: password
+    control: sufficient
+    module_path: pam_unix.so
+    module_arguments: rounds={{ var_password_pam_unix_rounds }}
+    state: args_present
+  when:
+  - accounts_password_pam_unix_rounds_password_auth | bool
+  - configure_strategy | bool
+  - low_complexity | bool
+  - medium_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - '"pam" in ansible_facts.packages'
+  tags:
+  - CCE-83403-6
+  - DISA-STIG-RHEL-08-010130
+  - accounts_password_pam_unix_rounds_password_auth
+  - configure_strategy
+  - low_complexity
+  - medium_disruption
+  - medium_severity
+  - no_reboot_needed
+
+- name: Gather the package facts
+  package_facts:
+    manager: auto
+  tags:
+  - CCE-83386-3
+  - DISA-STIG-RHEL-08-010130
+  - accounts_password_pam_unix_rounds_system_auth
+  - configure_strategy
+  - low_complexity
+  - medium_disruption
+  - medium_severity
+  - no_reboot_needed
+  when:
+  - accounts_password_pam_unix_rounds_system_auth | bool
+  - configure_strategy | bool
+  - low_complexity | bool
+  - medium_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+
+- name: Configure number of system-auth password hashing rounds in pam_unix.so
+  pamd:
+    name: system-auth
+    type: password
+    control: sufficient
+    module_path: pam_unix.so
+    module_arguments: rounds={{ var_password_pam_unix_rounds }}
+    state: args_present
+  when:
+  - accounts_password_pam_unix_rounds_system_auth | bool
+  - configure_strategy | bool
+  - low_complexity | bool
+  - medium_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - '"pam" in ansible_facts.packages'
+  tags:
+  - CCE-83386-3
+  - DISA-STIG-RHEL-08-010130
+  - accounts_password_pam_unix_rounds_system_auth
+  - configure_strategy
+  - low_complexity
+  - medium_disruption
+  - medium_severity
+  - no_reboot_needed
+
 - name: Ensure rsyslog is installed
   package:
     name: rsyslog
@@ -2113,6 +2113,29 @@
   - no_reboot_needed
   - service_rsyslog_enabled
 
+- name: Ensure dhcp-server is removed
+  package:
+    name: dhcp-server
+    state: absent
+  tags:
+  - CCE-83385-5
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-CM-7(a)
+  - NIST-800-53-CM-7(b)
+  - disable_strategy
+  - low_complexity
+  - low_disruption
+  - medium_severity
+  - no_reboot_needed
+  - package_dhcp_removed
+  when:
+  - disable_strategy | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - medium_severity | bool
+  - no_reboot_needed | bool
+  - package_dhcp_removed | bool
+
 - name: Ensure sendmail is removed
   package:
     name: sendmail
@@ -2138,29 +2161,6 @@
   - no_reboot_needed
   - package_sendmail_removed
 
-- name: Ensure dhcp-server is removed
-  package:
-    name: dhcp-server
-    state: absent
-  tags:
-  - CCE-83385-5
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-CM-7(a)
-  - NIST-800-53-CM-7(b)
-  - disable_strategy
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - package_dhcp_removed
-  when:
-  - disable_strategy | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - package_dhcp_removed | bool
-
 - name: Ensure xinetd is removed
   package:
     name: xinetd
@@ -2185,48 +2185,49 @@
   - no_reboot_needed
   - package_xinetd_removed
 
-- name: Ensure tftp-server is removed
+- name: Ensure ypbind is removed
   package:
-    name: tftp-server
+    name: ypbind
     state: absent
   tags:
-  - CCE-82436-7
-  - DISA-STIG-RHEL-08-040190
+  - CCE-82181-9
+  - disable_strategy
+  - low_complexity
+  - low_disruption
+  - no_reboot_needed
+  - package_ypbind_removed
+  - unknown_severity
+  when:
+  - disable_strategy | bool
+  - low_complexity | bool
+  - low_disruption | bool
+  - no_reboot_needed | bool
+  - package_ypbind_removed | bool
+  - unknown_severity | bool
+
+- name: Ensure ypserv is removed
+  package:
+    name: ypserv
+    state: absent
+  tags:
+  - CCE-82432-6
   - NIST-800-53-CM-6(a)
   - NIST-800-53-CM-7(a)
   - NIST-800-53-CM-7(b)
+  - NIST-800-53-IA-5(1)(c)
   - disable_strategy
   - high_severity
   - low_complexity
   - low_disruption
   - no_reboot_needed
-  - package_tftp-server_removed
+  - package_ypserv_removed
   when:
   - disable_strategy | bool
   - high_severity | bool
   - low_complexity | bool
   - low_disruption | bool
   - no_reboot_needed | bool
-
-- name: Ensure tftp is removed
-  package:
-    name: tftp
-    state: absent
-  tags:
-  - CCE-83590-0
-  - disable_strategy
-  - low_complexity
-  - low_disruption
-  - low_severity
-  - no_reboot_needed
-  - package_tftp_removed
-  when:
-  - disable_strategy | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - low_severity | bool
-  - no_reboot_needed | bool
-  - package_tftp_removed | bool
+  - package_ypserv_removed | bool
 
 - name: Ensure rsh-server is removed
   package:
@@ -2273,49 +2274,44 @@
   - package_rsh_removed | bool
   - unknown_severity | bool
 
-- name: Ensure ypbind is removed
+- name: Ensure talk-server is removed
   package:
-    name: ypbind
+    name: talk-server
     state: absent
   tags:
-  - CCE-82181-9
+  - CCE-82180-1
   - disable_strategy
   - low_complexity
   - low_disruption
+  - medium_severity
   - no_reboot_needed
-  - package_ypbind_removed
-  - unknown_severity
+  - package_talk-server_removed
   when:
   - disable_strategy | bool
   - low_complexity | bool
   - low_disruption | bool
+  - medium_severity | bool
   - no_reboot_needed | bool
-  - package_ypbind_removed | bool
-  - unknown_severity | bool
 
-- name: Ensure ypserv is removed
+- name: Ensure talk is removed
   package:
-    name: ypserv
+    name: talk
     state: absent
   tags:
-  - CCE-82432-6
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-CM-7(a)
-  - NIST-800-53-CM-7(b)
-  - NIST-800-53-IA-5(1)(c)
+  - CCE-80848-5
   - disable_strategy
-  - high_severity
   - low_complexity
   - low_disruption
+  - medium_severity
   - no_reboot_needed
-  - package_ypserv_removed
+  - package_talk_removed
   when:
   - disable_strategy | bool
-  - high_severity | bool
   - low_complexity | bool
   - low_disruption | bool
+  - medium_severity | bool
   - no_reboot_needed | bool
-  - package_ypserv_removed | bool
+  - package_talk_removed | bool
 
 - name: Ensure telnet-server is removed
   package:
@@ -2361,41 +2357,45 @@
   - no_reboot_needed | bool
   - package_telnet_removed | bool
 
-- name: Ensure talk-server is removed
+- name: Ensure tftp-server is removed
   package:
-    name: talk-server
+    name: tftp-server
     state: absent
   tags:
-  - CCE-82180-1
+  - CCE-82436-7
+  - DISA-STIG-RHEL-08-040190
+  - NIST-800-53-CM-6(a)
+  - NIST-800-53-CM-7(a)
+  - NIST-800-53-CM-7(b)
   - disable_strategy
+  - high_severity
   - low_complexity
   - low_disruption
-  - medium_severity
   - no_reboot_needed
-  - package_talk-server_removed
+  - package_tftp-server_removed
   when:
   - disable_strategy | bool
+  - high_severity | bool
   - low_complexity | bool
   - low_disruption | bool
-  - medium_severity | bool
   - no_reboot_needed | bool
 
-- name: Ensure talk is removed
+- name: Ensure tftp is removed
   package:
-    name: talk
+    name: tftp
     state: absent
   tags:
-  - CCE-80848-5
+  - CCE-83590-0
   - disable_strategy
   - low_complexity
   - low_disruption
-  - medium_severity
+  - low_severity
   - no_reboot_needed
-  - package_talk_removed
+  - package_tftp_removed
   when:
   - disable_strategy | bool
   - low_complexity | bool
   - low_disruption | bool
-  - medium_severity | bool
+  - low_severity | bool
   - no_reboot_needed | bool
-  - package_talk_removed | bool
+  - package_tftp_removed | bool

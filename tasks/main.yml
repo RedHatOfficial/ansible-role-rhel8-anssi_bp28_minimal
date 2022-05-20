@@ -535,16 +535,16 @@
   - NIST-800-53-SI-2(c)
   - PCI-DSS-Req-6.2
   - high_disruption
-  - high_severity
   - low_complexity
+  - medium_severity
   - patch_strategy
   - reboot_required
   - security_patches_up_to_date
   - skip_ansible_lint
   when:
   - high_disruption | bool
-  - high_severity | bool
   - low_complexity | bool
+  - medium_severity | bool
   - patch_strategy | bool
   - reboot_required | bool
   - security_patches_up_to_date | bool
@@ -1183,61 +1183,7 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
 
-- name: Check if system relies on authconfig
-  ansible.builtin.stat:
-    path: /usr/sbin/authconfig
-  register: result_authconfig_check
-  when:
-  - accounts_passwords_pam_faillock_deny | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80667-9
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020010
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.6
-  - accounts_passwords_pam_faillock_deny
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Ensure pam_faillock.so is properly enabled using authconfig tool
-  ansible.builtin.command:
-    cmd: authconfig --enablefaillock --update
-  when:
-  - accounts_passwords_pam_faillock_deny | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - result_authconfig_check.stat.exists
-  tags:
-  - CCE-80667-9
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020010
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.6
-  - accounts_passwords_pam_faillock_deny
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Check if system relies on authselect
+- name: Lock Accounts After Failed Password Attempts - Check if system relies on authselect tool
   ansible.builtin.stat:
     path: /usr/bin/authselect
   register: result_authselect_present
@@ -1249,7 +1195,6 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
-  - not result_authconfig_check.stat.exists
   tags:
   - CCE-80667-9
   - CJIS-5.5.3
@@ -1265,48 +1210,40 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Check integrity of authselect current profile
-  ansible.builtin.command:
-    cmd: authselect check
-  register: result_authselect_check_cmd
-  changed_when: false
-  ignore_errors: true
-  when:
-  - accounts_passwords_pam_faillock_deny | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
-  - result_authselect_present.stat.exists
-  tags:
-  - CCE-80667-9
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020010
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.6
-  - accounts_passwords_pam_faillock_deny
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Informative message based on the authselect integrity check result
-  ansible.builtin.assert:
-    that:
+- name: Lock Accounts After Failed Password Attempts - Remediation where authselect tool is present
+  block:
+  - name: Lock Accounts After Failed Password Attempts - Check integrity of authselect current profile
+    ansible.builtin.command:
+      cmd: authselect check
+    register: result_authselect_check_cmd
+    changed_when: false
+    ignore_errors: true
+  - name: Lock Accounts After Failed Password Attempts - Informative message based on the authselect integrity check result
+    ansible.builtin.assert:
+      that:
+      - result_authselect_check_cmd is success
+      fail_msg:
+      - authselect integrity check failed. Remediation aborted!
+      - This remediation could not be applied because an authselect profile was not selected or the selected profile is not
+        intact.
+      - It is not recommended to manually edit the PAM files when authselect tool is available.
+      - In cases where the default authselect profile does not cover a specific demand, a custom authselect profile is recommended.
+      success_msg:
+      - authselect integrity check passed
+  - name: Lock Accounts After Failed Password Attempts - Get authselect current features
+    ansible.builtin.shell:
+      cmd: authselect current | tail -n+3 | awk '{ print $2 }'
+    register: result_authselect_features
+    changed_when: false
+    when:
     - result_authselect_check_cmd is success
-    fail_msg:
-    - authselect integrity check failed. Remediation aborted!
-    - This remediation could not be applied because the authselect profile is not intact.
-    - It is not recommended to manually edit the PAM files when authselect is available
-    - In cases where the default authselect profile does not cover a specific demand, a custom authselect profile is recommended.
-    success_msg:
-    - authselect integrity check passed
+  - name: Lock Accounts After Failed Password Attempts - Ensure with-faillock feature is enabled using authselect tool
+    ansible.builtin.command:
+      cmd: authselect enable-feature with-faillock
+    register: result_authselect_cmd
+    when:
+    - result_authselect_check_cmd is success
+    - result_authselect_features.stdout is not search("with-faillock")
   when:
   - accounts_passwords_pam_faillock_deny | bool
   - low_complexity | bool
@@ -1315,38 +1252,7 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
-  tags:
-  - CCE-80667-9
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020010
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.6
-  - accounts_passwords_pam_faillock_deny
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Get authselect current features
-  ansible.builtin.shell:
-    cmd: authselect current | tail -n+3 | awk '{ print $2 }'
-  register: result_authselect_features
-  changed_when: false
-  when:
-  - accounts_passwords_pam_faillock_deny | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
   - result_authselect_present.stat.exists
-  - result_authselect_check_cmd is success
   tags:
   - CCE-80667-9
   - CJIS-5.5.3
@@ -1362,10 +1268,49 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Ensure with-faillock feature is enabled via authselect tool
-  ansible.builtin.command:
-    cmd: authselect enable-feature with-faillock
-  register: result_authselect_cmd
+- name: Lock Accounts After Failed Password Attempts - Remediation where authselect tool is not present
+  block:
+  - name: Lock Accounts After Failed Password Attempts - Check if pam_faillock.so is already enabled
+    ansible.builtin.lineinfile:
+      path: /etc/pam.d/system-auth
+      regexp: .*auth.*pam_faillock.so (preauth|authfail)
+      state: absent
+    check_mode: true
+    changed_when: false
+    register: result_pam_faillock_is_enabled
+  - name: Lock Accounts After Failed Password Attempts - Enable pam_faillock.so preauth editing PAM files
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      line: auth        required      pam_faillock.so preauth
+      insertbefore: ^auth.*sufficient.*pam_unix.so.*
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_is_enabled.found == 0
+  - name: Lock Accounts After Failed Password Attempts - Enable pam_faillock.so authfail editing PAM files
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      line: auth        required      pam_faillock.so authfail
+      insertafter: ^auth.*sufficient.*pam_unix.so.*
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_is_enabled.found == 0
+  - name: Lock Accounts After Failed Password Attempts - Enable pam_faillock.so account section editing PAM files
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      line: account     required      pam_faillock.so
+      insertbefore: ^account.*required.*pam_unix.so.*
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_is_enabled.found == 0
   when:
   - accounts_passwords_pam_faillock_deny | bool
   - low_complexity | bool
@@ -1374,10 +1319,7 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
-  - result_authselect_present.stat.exists
-  - result_authselect_check_cmd is success
-  - result_authselect_features.stdout is not search("with-faillock")
+  - not result_authselect_present.stat.exists
   tags:
   - CCE-80667-9
   - CJIS-5.5.3
@@ -1393,7 +1335,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Check the presence of /etc/security/faillock.conf file
+- name: Lock Accounts After Failed Password Attempts - Check the presence of /etc/security/faillock.conf file
   ansible.builtin.stat:
     path: /etc/security/faillock.conf
   register: result_faillock_conf_check
@@ -1420,7 +1362,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Ensure the pam_faillock.so deny parameter in /etc/security/faillock.conf
+- name: Lock Accounts After Failed Password Attempts - Ensure the pam_faillock.so deny parameter in /etc/security/faillock.conf
   ansible.builtin.lineinfile:
     path: /etc/security/faillock.conf
     regexp: ^\s*deny\s*=
@@ -1450,50 +1392,69 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Ensure the pam_faillock.so preauth deny parameter in auth section
-  ansible.builtin.lineinfile:
-    path: '{{ item }}'
-    backrefs: true
-    regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)(deny)=[0-5]+(.*)
-    line: \1required\3\4={{ var_accounts_passwords_pam_faillock_deny }}\5
-    state: present
-  loop:
-  - /etc/pam.d/system-auth
-  - /etc/pam.d/password-auth
-  when:
-  - accounts_passwords_pam_faillock_deny | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - not result_faillock_conf_check.stat.exists
-  tags:
-  - CCE-80667-9
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020010
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.6
-  - accounts_passwords_pam_faillock_deny
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Ensure the pam_faillock.so authfail deny parameter in auth section
-  ansible.builtin.lineinfile:
-    path: '{{ item }}'
-    backrefs: true
-    regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)(deny)=[0-5]+(.*)
-    line: \1required\3\4={{ var_accounts_passwords_pam_faillock_deny }}\5
-    state: present
-  loop:
-  - /etc/pam.d/system-auth
-  - /etc/pam.d/password-auth
+- name: Lock Accounts After Failed Password Attempts - Ensure the pam_faillock.so deny parameter in PAM files
+  block:
+  - name: Lock Accounts After Failed Password Attempts - Check if pam_faillock.so deny parameter is already enabled in pam
+      files
+    ansible.builtin.lineinfile:
+      path: /etc/pam.d/system-auth
+      regexp: .*auth.*pam_faillock.so (preauth|authfail).*deny
+      state: absent
+    check_mode: true
+    changed_when: false
+    register: result_pam_faillock_deny_parameter_is_present
+  - name: Lock Accounts After Failed Password Attempts - Ensure the inclusion of pam_faillock.so preauth deny parameter in
+      auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)
+      line: \1required\3 deny={{ var_accounts_passwords_pam_faillock_deny }}
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_deny_parameter_is_present.found == 0
+  - name: Lock Accounts After Failed Password Attempts - Ensure the inclusion of pam_faillock.so authfail deny parameter in
+      auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)
+      line: \1required\3 deny={{ var_accounts_passwords_pam_faillock_deny }}
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_deny_parameter_is_present.found == 0
+  - name: Lock Accounts After Failed Password Attempts - Ensure the desired value for pam_faillock.so preauth deny parameter
+      in auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)(deny)=[0-9]+(.*)
+      line: \1required\3\4={{ var_accounts_passwords_pam_faillock_deny }}\5
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_deny_parameter_is_present.found > 0
+  - name: Lock Accounts After Failed Password Attempts - Ensure the desired value for pam_faillock.so authfail deny parameter
+      in auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)(deny)=[0-9]+(.*)
+      line: \1required\3\4={{ var_accounts_passwords_pam_faillock_deny }}\5
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_deny_parameter_is_present.found > 0
   when:
   - accounts_passwords_pam_faillock_deny | bool
   - low_complexity | bool
@@ -1541,57 +1502,7 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
 
-- name: Check if system relies on authconfig
-  ansible.builtin.stat:
-    path: /usr/sbin/authconfig
-  register: result_authconfig_check
-  when:
-  - accounts_passwords_pam_faillock_deny_root | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80668-7
-  - DISA-STIG-RHEL-08-020022
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(c)
-  - accounts_passwords_pam_faillock_deny_root
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Ensure pam_faillock.so is properly enabled using authconfig tool
-  ansible.builtin.command:
-    cmd: authconfig --enablefaillock --update
-  when:
-  - accounts_passwords_pam_faillock_deny_root | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - result_authconfig_check.stat.exists
-  tags:
-  - CCE-80668-7
-  - DISA-STIG-RHEL-08-020022
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(c)
-  - accounts_passwords_pam_faillock_deny_root
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Check if system relies on authselect
+- name: Configure the root Account for Failed Password Attempts - Check if system relies on authselect tool
   ansible.builtin.stat:
     path: /usr/bin/authselect
   register: result_authselect_present
@@ -1603,7 +1514,6 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
-  - not result_authconfig_check.stat.exists
   tags:
   - CCE-80668-7
   - DISA-STIG-RHEL-08-020022
@@ -1617,46 +1527,42 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Check integrity of authselect current profile
-  ansible.builtin.command:
-    cmd: authselect check
-  register: result_authselect_check_cmd
-  changed_when: false
-  ignore_errors: true
-  when:
-  - accounts_passwords_pam_faillock_deny_root | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
-  - result_authselect_present.stat.exists
-  tags:
-  - CCE-80668-7
-  - DISA-STIG-RHEL-08-020022
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(c)
-  - accounts_passwords_pam_faillock_deny_root
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Informative message based on the authselect integrity check result
-  ansible.builtin.assert:
-    that:
+- name: Configure the root Account for Failed Password Attempts - Remediation where authselect tool is present
+  block:
+  - name: Configure the root Account for Failed Password Attempts - Check integrity of authselect current profile
+    ansible.builtin.command:
+      cmd: authselect check
+    register: result_authselect_check_cmd
+    changed_when: false
+    ignore_errors: true
+  - name: Configure the root Account for Failed Password Attempts - Informative message based on the authselect integrity
+      check result
+    ansible.builtin.assert:
+      that:
+      - result_authselect_check_cmd is success
+      fail_msg:
+      - authselect integrity check failed. Remediation aborted!
+      - This remediation could not be applied because an authselect profile was not selected or the selected profile is not
+        intact.
+      - It is not recommended to manually edit the PAM files when authselect tool is available.
+      - In cases where the default authselect profile does not cover a specific demand, a custom authselect profile is recommended.
+      success_msg:
+      - authselect integrity check passed
+  - name: Configure the root Account for Failed Password Attempts - Get authselect current features
+    ansible.builtin.shell:
+      cmd: authselect current | tail -n+3 | awk '{ print $2 }'
+    register: result_authselect_features
+    changed_when: false
+    when:
     - result_authselect_check_cmd is success
-    fail_msg:
-    - authselect integrity check failed. Remediation aborted!
-    - This remediation could not be applied because the authselect profile is not intact.
-    - It is not recommended to manually edit the PAM files when authselect is available
-    - In cases where the default authselect profile does not cover a specific demand, a custom authselect profile is recommended.
-    success_msg:
-    - authselect integrity check passed
+  - name: Configure the root Account for Failed Password Attempts - Ensure with-faillock feature is enabled using authselect
+      tool
+    ansible.builtin.command:
+      cmd: authselect enable-feature with-faillock
+    register: result_authselect_cmd
+    when:
+    - result_authselect_check_cmd is success
+    - result_authselect_features.stdout is not search("with-faillock")
   when:
   - accounts_passwords_pam_faillock_deny_root | bool
   - low_complexity | bool
@@ -1665,36 +1571,7 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
-  tags:
-  - CCE-80668-7
-  - DISA-STIG-RHEL-08-020022
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(c)
-  - accounts_passwords_pam_faillock_deny_root
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Get authselect current features
-  ansible.builtin.shell:
-    cmd: authselect current | tail -n+3 | awk '{ print $2 }'
-  register: result_authselect_features
-  changed_when: false
-  when:
-  - accounts_passwords_pam_faillock_deny_root | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
   - result_authselect_present.stat.exists
-  - result_authselect_check_cmd is success
   tags:
   - CCE-80668-7
   - DISA-STIG-RHEL-08-020022
@@ -1708,10 +1585,49 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Ensure with-faillock feature is enabled via authselect tool
-  ansible.builtin.command:
-    cmd: authselect enable-feature with-faillock
-  register: result_authselect_cmd
+- name: Configure the root Account for Failed Password Attempts - Remediation where authselect tool is not present
+  block:
+  - name: Configure the root Account for Failed Password Attempts - Check if pam_faillock.so is already enabled
+    ansible.builtin.lineinfile:
+      path: /etc/pam.d/system-auth
+      regexp: .*auth.*pam_faillock.so (preauth|authfail)
+      state: absent
+    check_mode: true
+    changed_when: false
+    register: result_pam_faillock_is_enabled
+  - name: Configure the root Account for Failed Password Attempts - Enable pam_faillock.so preauth editing PAM files
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      line: auth        required      pam_faillock.so preauth
+      insertbefore: ^auth.*sufficient.*pam_unix.so.*
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_is_enabled.found == 0
+  - name: Configure the root Account for Failed Password Attempts - Enable pam_faillock.so authfail editing PAM files
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      line: auth        required      pam_faillock.so authfail
+      insertafter: ^auth.*sufficient.*pam_unix.so.*
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_is_enabled.found == 0
+  - name: Configure the root Account for Failed Password Attempts - Enable pam_faillock.so account section editing PAM files
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      line: account     required      pam_faillock.so
+      insertbefore: ^account.*required.*pam_unix.so.*
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_is_enabled.found == 0
   when:
   - accounts_passwords_pam_faillock_deny_root | bool
   - low_complexity | bool
@@ -1720,10 +1636,7 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
-  - result_authselect_present.stat.exists
-  - result_authselect_check_cmd is success
-  - result_authselect_features.stdout is not search("with-faillock")
+  - not result_authselect_present.stat.exists
   tags:
   - CCE-80668-7
   - DISA-STIG-RHEL-08-020022
@@ -1737,7 +1650,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Check the presence of /etc/security/faillock.conf file
+- name: Configure the root Account for Failed Password Attempts - Check the presence of /etc/security/faillock.conf file
   ansible.builtin.stat:
     path: /etc/security/faillock.conf
   register: result_faillock_conf_check
@@ -1762,7 +1675,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Ensure the pam_faillock.so even_deny_root parameter in /etc/security/faillock.conf
+- name: Configure the root Account for Failed Password Attempts - Ensure the pam_faillock.so even_deny_root parameter in /etc/security/faillock.conf
   ansible.builtin.lineinfile:
     path: /etc/security/faillock.conf
     regexp: ^\s*even_deny_root
@@ -1790,14 +1703,44 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Check if pam_faillock.so even_deny_root parameter is already enabled in pam files
-  ansible.builtin.lineinfile:
-    path: /etc/pam.d/system-auth
-    regexp: .*auth.*pam_faillock.so (preauth|authfail).*even_deny_root
-    state: absent
-  check_mode: true
-  changed_when: false
-  register: result_pam_faillock_even_deny_root
+- name: Configure the root Account for Failed Password Attempts - Ensure the pam_faillock.so even_deny_root parameter in PAM
+    files
+  block:
+  - name: Configure the root Account for Failed Password Attempts - Check if pam_faillock.so even_deny_root parameter is already
+      enabled in pam files
+    ansible.builtin.lineinfile:
+      path: /etc/pam.d/system-auth
+      regexp: .*auth.*pam_faillock.so (preauth|authfail).*even_deny_root
+      state: absent
+    check_mode: true
+    changed_when: false
+    register: result_pam_faillock_even_deny_root_parameter_is_present
+  - name: Configure the root Account for Failed Password Attempts - Ensure the inclusion of pam_faillock.so preauth even_deny_root
+      parameter in auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)
+      line: \1required\3 even_deny_root
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_even_deny_root_parameter_is_present.found == 0
+  - name: Configure the root Account for Failed Password Attempts - Ensure the inclusion of pam_faillock.so authfail even_deny_root
+      parameter in auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)
+      line: \1required\3 even_deny_root
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_even_deny_root_parameter_is_present.found == 0
   when:
   - accounts_passwords_pam_faillock_deny_root | bool
   - low_complexity | bool
@@ -1807,72 +1750,6 @@
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
   - not result_faillock_conf_check.stat.exists
-  tags:
-  - CCE-80668-7
-  - DISA-STIG-RHEL-08-020022
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(c)
-  - accounts_passwords_pam_faillock_deny_root
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Ensure the pam_faillock.so preauth even_deny_root parameter in auth section
-  ansible.builtin.lineinfile:
-    path: '{{ item }}'
-    backrefs: true
-    regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)
-    line: \1required\3 even_deny_root
-    state: present
-  loop:
-  - /etc/pam.d/system-auth
-  - /etc/pam.d/password-auth
-  when:
-  - accounts_passwords_pam_faillock_deny_root | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - not result_faillock_conf_check.stat.exists
-  - result_pam_faillock_even_deny_root.found == 0
-  tags:
-  - CCE-80668-7
-  - DISA-STIG-RHEL-08-020022
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - NIST-800-53-IA-5(c)
-  - accounts_passwords_pam_faillock_deny_root
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Ensure the pam_faillock.so authfail even_deny_root parameter in auth section
-  ansible.builtin.lineinfile:
-    path: '{{ item }}'
-    backrefs: true
-    regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)
-    line: \1required\3 even_deny_root
-    state: present
-  loop:
-  - /etc/pam.d/system-auth
-  - /etc/pam.d/password-auth
-  when:
-  - accounts_passwords_pam_faillock_deny_root | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - not result_faillock_conf_check.stat.exists
-  - result_pam_faillock_even_deny_root.found == 0
   tags:
   - CCE-80668-7
   - DISA-STIG-RHEL-08-020022
@@ -1908,55 +1785,7 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
 
-- name: Check if system relies on authconfig
-  ansible.builtin.stat:
-    path: /usr/sbin/authconfig
-  register: result_authconfig_check
-  when:
-  - accounts_passwords_pam_faillock_interval | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80669-5
-  - DISA-STIG-RHEL-08-020012
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - accounts_passwords_pam_faillock_interval
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Ensure pam_faillock.so is properly enabled using authconfig tool
-  ansible.builtin.command:
-    cmd: authconfig --enablefaillock --update
-  when:
-  - accounts_passwords_pam_faillock_interval | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - result_authconfig_check.stat.exists
-  tags:
-  - CCE-80669-5
-  - DISA-STIG-RHEL-08-020012
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - accounts_passwords_pam_faillock_interval
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Check if system relies on authselect
+- name: Set Interval For Counting Failed Password Attempts - Check if system relies on authselect tool
   ansible.builtin.stat:
     path: /usr/bin/authselect
   register: result_authselect_present
@@ -1968,7 +1797,6 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
-  - not result_authconfig_check.stat.exists
   tags:
   - CCE-80669-5
   - DISA-STIG-RHEL-08-020012
@@ -1981,45 +1809,41 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Check integrity of authselect current profile
-  ansible.builtin.command:
-    cmd: authselect check
-  register: result_authselect_check_cmd
-  changed_when: false
-  ignore_errors: true
-  when:
-  - accounts_passwords_pam_faillock_interval | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
-  - result_authselect_present.stat.exists
-  tags:
-  - CCE-80669-5
-  - DISA-STIG-RHEL-08-020012
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - accounts_passwords_pam_faillock_interval
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Informative message based on the authselect integrity check result
-  ansible.builtin.assert:
-    that:
+- name: Set Interval For Counting Failed Password Attempts - Remediation where authselect tool is present
+  block:
+  - name: Set Interval For Counting Failed Password Attempts - Check integrity of authselect current profile
+    ansible.builtin.command:
+      cmd: authselect check
+    register: result_authselect_check_cmd
+    changed_when: false
+    ignore_errors: true
+  - name: Set Interval For Counting Failed Password Attempts - Informative message based on the authselect integrity check
+      result
+    ansible.builtin.assert:
+      that:
+      - result_authselect_check_cmd is success
+      fail_msg:
+      - authselect integrity check failed. Remediation aborted!
+      - This remediation could not be applied because an authselect profile was not selected or the selected profile is not
+        intact.
+      - It is not recommended to manually edit the PAM files when authselect tool is available.
+      - In cases where the default authselect profile does not cover a specific demand, a custom authselect profile is recommended.
+      success_msg:
+      - authselect integrity check passed
+  - name: Set Interval For Counting Failed Password Attempts - Get authselect current features
+    ansible.builtin.shell:
+      cmd: authselect current | tail -n+3 | awk '{ print $2 }'
+    register: result_authselect_features
+    changed_when: false
+    when:
     - result_authselect_check_cmd is success
-    fail_msg:
-    - authselect integrity check failed. Remediation aborted!
-    - This remediation could not be applied because the authselect profile is not intact.
-    - It is not recommended to manually edit the PAM files when authselect is available
-    - In cases where the default authselect profile does not cover a specific demand, a custom authselect profile is recommended.
-    success_msg:
-    - authselect integrity check passed
+  - name: Set Interval For Counting Failed Password Attempts - Ensure with-faillock feature is enabled using authselect tool
+    ansible.builtin.command:
+      cmd: authselect enable-feature with-faillock
+    register: result_authselect_cmd
+    when:
+    - result_authselect_check_cmd is success
+    - result_authselect_features.stdout is not search("with-faillock")
   when:
   - accounts_passwords_pam_faillock_interval | bool
   - low_complexity | bool
@@ -2028,35 +1852,7 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
-  tags:
-  - CCE-80669-5
-  - DISA-STIG-RHEL-08-020012
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - accounts_passwords_pam_faillock_interval
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Get authselect current features
-  ansible.builtin.shell:
-    cmd: authselect current | tail -n+3 | awk '{ print $2 }'
-  register: result_authselect_features
-  changed_when: false
-  when:
-  - accounts_passwords_pam_faillock_interval | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
   - result_authselect_present.stat.exists
-  - result_authselect_check_cmd is success
   tags:
   - CCE-80669-5
   - DISA-STIG-RHEL-08-020012
@@ -2069,10 +1865,49 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Ensure with-faillock feature is enabled via authselect tool
-  ansible.builtin.command:
-    cmd: authselect enable-feature with-faillock
-  register: result_authselect_cmd
+- name: Set Interval For Counting Failed Password Attempts - Remediation where authselect tool is not present
+  block:
+  - name: Set Interval For Counting Failed Password Attempts - Check if pam_faillock.so is already enabled
+    ansible.builtin.lineinfile:
+      path: /etc/pam.d/system-auth
+      regexp: .*auth.*pam_faillock.so (preauth|authfail)
+      state: absent
+    check_mode: true
+    changed_when: false
+    register: result_pam_faillock_is_enabled
+  - name: Set Interval For Counting Failed Password Attempts - Enable pam_faillock.so preauth editing PAM files
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      line: auth        required      pam_faillock.so preauth
+      insertbefore: ^auth.*sufficient.*pam_unix.so.*
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_is_enabled.found == 0
+  - name: Set Interval For Counting Failed Password Attempts - Enable pam_faillock.so authfail editing PAM files
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      line: auth        required      pam_faillock.so authfail
+      insertafter: ^auth.*sufficient.*pam_unix.so.*
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_is_enabled.found == 0
+  - name: Set Interval For Counting Failed Password Attempts - Enable pam_faillock.so account section editing PAM files
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      line: account     required      pam_faillock.so
+      insertbefore: ^account.*required.*pam_unix.so.*
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_is_enabled.found == 0
   when:
   - accounts_passwords_pam_faillock_interval | bool
   - low_complexity | bool
@@ -2081,10 +1916,7 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
-  - result_authselect_present.stat.exists
-  - result_authselect_check_cmd is success
-  - result_authselect_features.stdout is not search("with-faillock")
+  - not result_authselect_present.stat.exists
   tags:
   - CCE-80669-5
   - DISA-STIG-RHEL-08-020012
@@ -2097,7 +1929,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Check the presence of /etc/security/faillock.conf file
+- name: Set Interval For Counting Failed Password Attempts - Check the presence of /etc/security/faillock.conf file
   ansible.builtin.stat:
     path: /etc/security/faillock.conf
   register: result_faillock_conf_check
@@ -2121,7 +1953,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Ensure the pam_faillock.so fail_interval parameter in /etc/security/faillock.conf
+- name: Set Interval For Counting Failed Password Attempts - Ensure the pam_faillock.so fail_interval parameter in /etc/security/faillock.conf
   ansible.builtin.lineinfile:
     path: /etc/security/faillock.conf
     regexp: ^\s*fail_interval\s*=
@@ -2148,14 +1980,69 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Check if pam_faillock.so fail_interval parameter is already enabled in pam files
-  ansible.builtin.lineinfile:
-    path: /etc/pam.d/system-auth
-    regexp: .*auth.*pam_faillock.so (preauth|authfail).*fail_interval
-    state: absent
-  check_mode: true
-  changed_when: false
-  register: result_pam_faillock_fail_interval
+- name: Set Interval For Counting Failed Password Attempts - Ensure the pam_faillock.so fail_interval parameter in PAM files
+  block:
+  - name: Set Interval For Counting Failed Password Attempts - Check if pam_faillock.so fail_interval parameter is already
+      enabled in pam files
+    ansible.builtin.lineinfile:
+      path: /etc/pam.d/system-auth
+      regexp: .*auth.*pam_faillock.so (preauth|authfail).*fail_interval
+      state: absent
+    check_mode: true
+    changed_when: false
+    register: result_pam_faillock_fail_interval_parameter_is_present
+  - name: Set Interval For Counting Failed Password Attempts - Ensure the inclusion of pam_faillock.so preauth fail_interval
+      parameter in auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)
+      line: \1required\3 fail_interval={{ var_accounts_passwords_pam_faillock_fail_interval }}
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_fail_interval_parameter_is_present.found == 0
+  - name: Set Interval For Counting Failed Password Attempts - Ensure the inclusion of pam_faillock.so authfail fail_interval
+      parameter in auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)
+      line: \1required\3 fail_interval={{ var_accounts_passwords_pam_faillock_fail_interval }}
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_fail_interval_parameter_is_present.found == 0
+  - name: Set Interval For Counting Failed Password Attempts - Ensure the desired value for pam_faillock.so preauth fail_interval
+      parameter in auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)(fail_interval)=[0-9]+(.*)
+      line: \1required\3\4={{ var_accounts_passwords_pam_faillock_fail_interval }}\5
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_fail_interval_parameter_is_present.found > 0
+  - name: Set Interval For Counting Failed Password Attempts - Ensure the desired value for pam_faillock.so authfail fail_interval
+      parameter in auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)(fail_interval)=[0-9]+(.*)
+      line: \1required\3\4={{ var_accounts_passwords_pam_faillock_fail_interval }}\5
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_fail_interval_parameter_is_present.found > 0
   when:
   - accounts_passwords_pam_faillock_interval | bool
   - low_complexity | bool
@@ -2165,134 +2052,6 @@
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
   - not result_faillock_conf_check.stat.exists
-  tags:
-  - CCE-80669-5
-  - DISA-STIG-RHEL-08-020012
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - accounts_passwords_pam_faillock_interval
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Ensure the inclusion of pam_faillock.so preauth fail_interval parameter in auth section
-  ansible.builtin.lineinfile:
-    path: '{{ item }}'
-    backrefs: true
-    regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)
-    line: \1required\3 fail_interval={{ var_accounts_passwords_pam_faillock_fail_interval }}
-    state: present
-  loop:
-  - /etc/pam.d/system-auth
-  - /etc/pam.d/password-auth
-  when:
-  - accounts_passwords_pam_faillock_interval | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - not result_faillock_conf_check.stat.exists
-  - result_pam_faillock_fail_interval.found == 0
-  tags:
-  - CCE-80669-5
-  - DISA-STIG-RHEL-08-020012
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - accounts_passwords_pam_faillock_interval
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Ensure the inclusion of pam_faillock.so authfail fail_interval parameter in auth section
-  ansible.builtin.lineinfile:
-    path: '{{ item }}'
-    backrefs: true
-    regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)
-    line: \1required\3 fail_interval={{ var_accounts_passwords_pam_faillock_fail_interval }}
-    state: present
-  loop:
-  - /etc/pam.d/system-auth
-  - /etc/pam.d/password-auth
-  when:
-  - accounts_passwords_pam_faillock_interval | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - not result_faillock_conf_check.stat.exists
-  - result_pam_faillock_fail_interval.found == 0
-  tags:
-  - CCE-80669-5
-  - DISA-STIG-RHEL-08-020012
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - accounts_passwords_pam_faillock_interval
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Ensure the desired value for pam_faillock.so preauth fail_interval parameter in auth section
-  ansible.builtin.lineinfile:
-    path: '{{ item }}'
-    backrefs: true
-    regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)(fail_interval)=[0-5]+(.*)
-    line: \1required\3\4={{ var_accounts_passwords_pam_faillock_fail_interval }}\5
-    state: present
-  loop:
-  - /etc/pam.d/system-auth
-  - /etc/pam.d/password-auth
-  when:
-  - accounts_passwords_pam_faillock_interval | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - not result_faillock_conf_check.stat.exists
-  - result_pam_faillock_fail_interval.found > 0
-  tags:
-  - CCE-80669-5
-  - DISA-STIG-RHEL-08-020012
-  - NIST-800-53-AC-7(a)
-  - NIST-800-53-CM-6(a)
-  - accounts_passwords_pam_faillock_interval
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Ensure the desired value for pam_faillock.so authfail fail_interval parameter in auth section
-  ansible.builtin.lineinfile:
-    path: '{{ item }}'
-    backrefs: true
-    regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)(fail_interval)=[0-5]+(.*)
-    line: \1required\3\4={{ var_accounts_passwords_pam_faillock_fail_interval }}\5
-    state: present
-  loop:
-  - /etc/pam.d/system-auth
-  - /etc/pam.d/password-auth
-  when:
-  - accounts_passwords_pam_faillock_interval | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - not result_faillock_conf_check.stat.exists
-  - result_pam_faillock_fail_interval.found > 0
   tags:
   - CCE-80669-5
   - DISA-STIG-RHEL-08-020012
@@ -2330,61 +2089,7 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
 
-- name: Check if system relies on authconfig
-  ansible.builtin.stat:
-    path: /usr/sbin/authconfig
-  register: result_authconfig_check
-  when:
-  - accounts_passwords_pam_faillock_unlock_time | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  tags:
-  - CCE-80670-3
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020016
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.7
-  - accounts_passwords_pam_faillock_unlock_time
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Ensure pam_faillock.so is properly enabled using authconfig tool
-  ansible.builtin.command:
-    cmd: authconfig --enablefaillock --update
-  when:
-  - accounts_passwords_pam_faillock_unlock_time | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - result_authconfig_check.stat.exists
-  tags:
-  - CCE-80670-3
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020016
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.7
-  - accounts_passwords_pam_faillock_unlock_time
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Check if system relies on authselect
+- name: Set Lockout Time for Failed Password Attempts - Check if system relies on authselect tool
   ansible.builtin.stat:
     path: /usr/bin/authselect
   register: result_authselect_present
@@ -2396,7 +2101,6 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
-  - not result_authconfig_check.stat.exists
   tags:
   - CCE-80670-3
   - CJIS-5.5.3
@@ -2412,48 +2116,40 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Check integrity of authselect current profile
-  ansible.builtin.command:
-    cmd: authselect check
-  register: result_authselect_check_cmd
-  changed_when: false
-  ignore_errors: true
-  when:
-  - accounts_passwords_pam_faillock_unlock_time | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
-  - result_authselect_present.stat.exists
-  tags:
-  - CCE-80670-3
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020016
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.7
-  - accounts_passwords_pam_faillock_unlock_time
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Informative message based on the authselect integrity check result
-  ansible.builtin.assert:
-    that:
+- name: Set Lockout Time for Failed Password Attempts - Remediation where authselect tool is present
+  block:
+  - name: Set Lockout Time for Failed Password Attempts - Check integrity of authselect current profile
+    ansible.builtin.command:
+      cmd: authselect check
+    register: result_authselect_check_cmd
+    changed_when: false
+    ignore_errors: true
+  - name: Set Lockout Time for Failed Password Attempts - Informative message based on the authselect integrity check result
+    ansible.builtin.assert:
+      that:
+      - result_authselect_check_cmd is success
+      fail_msg:
+      - authselect integrity check failed. Remediation aborted!
+      - This remediation could not be applied because an authselect profile was not selected or the selected profile is not
+        intact.
+      - It is not recommended to manually edit the PAM files when authselect tool is available.
+      - In cases where the default authselect profile does not cover a specific demand, a custom authselect profile is recommended.
+      success_msg:
+      - authselect integrity check passed
+  - name: Set Lockout Time for Failed Password Attempts - Get authselect current features
+    ansible.builtin.shell:
+      cmd: authselect current | tail -n+3 | awk '{ print $2 }'
+    register: result_authselect_features
+    changed_when: false
+    when:
     - result_authselect_check_cmd is success
-    fail_msg:
-    - authselect integrity check failed. Remediation aborted!
-    - This remediation could not be applied because the authselect profile is not intact.
-    - It is not recommended to manually edit the PAM files when authselect is available
-    - In cases where the default authselect profile does not cover a specific demand, a custom authselect profile is recommended.
-    success_msg:
-    - authselect integrity check passed
+  - name: Set Lockout Time for Failed Password Attempts - Ensure with-faillock feature is enabled using authselect tool
+    ansible.builtin.command:
+      cmd: authselect enable-feature with-faillock
+    register: result_authselect_cmd
+    when:
+    - result_authselect_check_cmd is success
+    - result_authselect_features.stdout is not search("with-faillock")
   when:
   - accounts_passwords_pam_faillock_unlock_time | bool
   - low_complexity | bool
@@ -2462,38 +2158,7 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
-  tags:
-  - CCE-80670-3
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020016
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.7
-  - accounts_passwords_pam_faillock_unlock_time
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Get authselect current features
-  ansible.builtin.shell:
-    cmd: authselect current | tail -n+3 | awk '{ print $2 }'
-  register: result_authselect_features
-  changed_when: false
-  when:
-  - accounts_passwords_pam_faillock_unlock_time | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
   - result_authselect_present.stat.exists
-  - result_authselect_check_cmd is success
   tags:
   - CCE-80670-3
   - CJIS-5.5.3
@@ -2509,10 +2174,49 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Ensure with-faillock feature is enabled via authselect tool
-  ansible.builtin.command:
-    cmd: authselect enable-feature with-faillock
-  register: result_authselect_cmd
+- name: Set Lockout Time for Failed Password Attempts - Remediation where authselect tool is not present
+  block:
+  - name: Set Lockout Time for Failed Password Attempts - Check if pam_faillock.so is already enabled
+    ansible.builtin.lineinfile:
+      path: /etc/pam.d/system-auth
+      regexp: .*auth.*pam_faillock.so (preauth|authfail)
+      state: absent
+    check_mode: true
+    changed_when: false
+    register: result_pam_faillock_is_enabled
+  - name: Set Lockout Time for Failed Password Attempts - Enable pam_faillock.so preauth editing PAM files
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      line: auth        required      pam_faillock.so preauth
+      insertbefore: ^auth.*sufficient.*pam_unix.so.*
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_is_enabled.found == 0
+  - name: Set Lockout Time for Failed Password Attempts - Enable pam_faillock.so authfail editing PAM files
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      line: auth        required      pam_faillock.so authfail
+      insertafter: ^auth.*sufficient.*pam_unix.so.*
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_is_enabled.found == 0
+  - name: Set Lockout Time for Failed Password Attempts - Enable pam_faillock.so account section editing PAM files
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      line: account     required      pam_faillock.so
+      insertbefore: ^account.*required.*pam_unix.so.*
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_is_enabled.found == 0
   when:
   - accounts_passwords_pam_faillock_unlock_time | bool
   - low_complexity | bool
@@ -2521,10 +2225,7 @@
   - no_reboot_needed | bool
   - restrict_strategy | bool
   - '"pam" in ansible_facts.packages'
-  - result_authselect_present is not skipped
-  - result_authselect_present.stat.exists
-  - result_authselect_check_cmd is success
-  - result_authselect_features.stdout is not search("with-faillock")
+  - not result_authselect_present.stat.exists
   tags:
   - CCE-80670-3
   - CJIS-5.5.3
@@ -2540,7 +2241,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Check the presence of /etc/security/faillock.conf file
+- name: Set Lockout Time for Failed Password Attempts - Check the presence of /etc/security/faillock.conf file
   ansible.builtin.stat:
     path: /etc/security/faillock.conf
   register: result_faillock_conf_check
@@ -2567,7 +2268,7 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Ensure the pam_faillock.so unlock_time parameter in /etc/security/faillock.conf
+- name: Set Lockout Time for Failed Password Attempts - Ensure the pam_faillock.so unlock_time parameter in /etc/security/faillock.conf
   ansible.builtin.lineinfile:
     path: /etc/security/faillock.conf
     regexp: ^\s*unlock_time\s*=
@@ -2597,50 +2298,69 @@
   - no_reboot_needed
   - restrict_strategy
 
-- name: Ensure the pam_faillock.so preauth unlock_time parameter in auth section
-  ansible.builtin.lineinfile:
-    path: '{{ item }}'
-    backrefs: true
-    regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)(unlock_time)=[0-5]+(.*)
-    line: \1required\3\4={{ var_accounts_passwords_pam_faillock_unlock_time }}\5
-    state: present
-  loop:
-  - /etc/pam.d/system-auth
-  - /etc/pam.d/password-auth
-  when:
-  - accounts_passwords_pam_faillock_unlock_time | bool
-  - low_complexity | bool
-  - low_disruption | bool
-  - medium_severity | bool
-  - no_reboot_needed | bool
-  - restrict_strategy | bool
-  - '"pam" in ansible_facts.packages'
-  - not result_faillock_conf_check.stat.exists
-  tags:
-  - CCE-80670-3
-  - CJIS-5.5.3
-  - DISA-STIG-RHEL-08-020016
-  - NIST-800-171-3.1.8
-  - NIST-800-53-AC-7(b)
-  - NIST-800-53-CM-6(a)
-  - PCI-DSS-Req-8.1.7
-  - accounts_passwords_pam_faillock_unlock_time
-  - low_complexity
-  - low_disruption
-  - medium_severity
-  - no_reboot_needed
-  - restrict_strategy
-
-- name: Ensure the pam_faillock.so authfail unlock_time parameter in auth section
-  ansible.builtin.lineinfile:
-    path: '{{ item }}'
-    backrefs: true
-    regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)(unlock_time)=[0-5]+(.*)
-    line: \1required\3\4={{ var_accounts_passwords_pam_faillock_unlock_time }}\5
-    state: present
-  loop:
-  - /etc/pam.d/system-auth
-  - /etc/pam.d/password-auth
+- name: Set Lockout Time for Failed Password Attempts - Ensure the pam_faillock.so unlock_time parameter in PAM files
+  block:
+  - name: Set Lockout Time for Failed Password Attempts - Check if pam_faillock.so unlock_time parameter is already enabled
+      in pam files
+    ansible.builtin.lineinfile:
+      path: /etc/pam.d/system-auth
+      regexp: .*auth.*pam_faillock.so (preauth|authfail).*unlock_time
+      state: absent
+    check_mode: true
+    changed_when: false
+    register: result_pam_faillock_unlock_time_parameter_is_present
+  - name: Set Lockout Time for Failed Password Attempts - Ensure the inclusion of pam_faillock.so preauth unlock_time parameter
+      in auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)
+      line: \1required\3 unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time }}
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_unlock_time_parameter_is_present.found == 0
+  - name: Set Lockout Time for Failed Password Attempts - Ensure the inclusion of pam_faillock.so authfail unlock_time parameter
+      in auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)
+      line: \1required\3 unlock_time={{ var_accounts_passwords_pam_faillock_unlock_time }}
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_unlock_time_parameter_is_present.found == 0
+  - name: Set Lockout Time for Failed Password Attempts - Ensure the desired value for pam_faillock.so preauth unlock_time
+      parameter in auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so preauth.*)(unlock_time)=[0-9]+(.*)
+      line: \1required\3\4={{ var_accounts_passwords_pam_faillock_unlock_time }}\5
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_unlock_time_parameter_is_present.found > 0
+  - name: Set Lockout Time for Failed Password Attempts - Ensure the desired value for pam_faillock.so authfail unlock_time
+      parameter in auth section
+    ansible.builtin.lineinfile:
+      path: '{{ item }}'
+      backrefs: true
+      regexp: (^\s*auth\s+)([\w\[].*\b)(\s+pam_faillock.so authfail.*)(unlock_time)=[0-9]+(.*)
+      line: \1required\3\4={{ var_accounts_passwords_pam_faillock_unlock_time }}\5
+      state: present
+    loop:
+    - /etc/pam.d/system-auth
+    - /etc/pam.d/password-auth
+    when:
+    - result_pam_faillock_unlock_time_parameter_is_present.found > 0
   when:
   - accounts_passwords_pam_faillock_unlock_time | bool
   - low_complexity | bool

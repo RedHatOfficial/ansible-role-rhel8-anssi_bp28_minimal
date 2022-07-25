@@ -2771,7 +2771,6 @@
     manager: auto
   tags:
   - CCE-83403-6
-  - DISA-STIG-RHEL-08-010130
   - accounts_password_pam_unix_rounds_password_auth
   - configure_strategy
   - low_complexity
@@ -2805,7 +2804,6 @@
   - '"pam" in ansible_facts.packages'
   tags:
   - CCE-83403-6
-  - DISA-STIG-RHEL-08-010130
   - accounts_password_pam_unix_rounds_password_auth
   - configure_strategy
   - low_complexity
@@ -2827,7 +2825,6 @@
   - '"pam" in ansible_facts.packages'
   tags:
   - CCE-83403-6
-  - DISA-STIG-RHEL-08-010130
   - accounts_password_pam_unix_rounds_password_auth
   - configure_strategy
   - low_complexity
@@ -2955,7 +2952,6 @@
   - result_authselect_present.stat.exists
   tags:
   - CCE-83403-6
-  - DISA-STIG-RHEL-08-010130
   - accounts_password_pam_unix_rounds_password_auth
   - configure_strategy
   - low_complexity
@@ -2988,7 +2984,6 @@
   - not result_authselect_present.stat.exists
   tags:
   - CCE-83403-6
-  - DISA-STIG-RHEL-08-010130
   - accounts_password_pam_unix_rounds_password_auth
   - configure_strategy
   - low_complexity
@@ -3001,7 +2996,6 @@
     manager: auto
   tags:
   - CCE-83386-3
-  - DISA-STIG-RHEL-08-010131
   - accounts_password_pam_unix_rounds_system_auth
   - configure_strategy
   - low_complexity
@@ -3035,7 +3029,6 @@
   - '"pam" in ansible_facts.packages'
   tags:
   - CCE-83386-3
-  - DISA-STIG-RHEL-08-010131
   - accounts_password_pam_unix_rounds_system_auth
   - configure_strategy
   - low_complexity
@@ -3057,7 +3050,6 @@
   - '"pam" in ansible_facts.packages'
   tags:
   - CCE-83386-3
-  - DISA-STIG-RHEL-08-010131
   - accounts_password_pam_unix_rounds_system_auth
   - configure_strategy
   - low_complexity
@@ -3185,7 +3177,6 @@
   - result_authselect_present.stat.exists
   tags:
   - CCE-83386-3
-  - DISA-STIG-RHEL-08-010131
   - accounts_password_pam_unix_rounds_system_auth
   - configure_strategy
   - low_complexity
@@ -3218,7 +3209,6 @@
   - not result_authselect_present.stat.exists
   tags:
   - CCE-83386-3
-  - DISA-STIG-RHEL-08-010131
   - accounts_password_pam_unix_rounds_system_auth
   - configure_strategy
   - low_complexity

@@ -38,7 +38,6 @@ DISA_STIG_RHEL_08_020231: true
 DISA_STIG_RHEL_08_020280: true
 DISA_STIG_RHEL_08_040000: true
 DISA_STIG_RHEL_08_040002: true
-DISA_STIG_RHEL_08_040010: true
 DISA_STIG_RHEL_08_040190: true
 accounts_password_minlen_login_defs: true
 accounts_password_pam_dcredit: true
@@ -76,11 +75,7 @@ medium_severity: true
 no_reboot_needed: true
 package_dhcp_removed: true
 package_dnf_automatic_installed: true
-package_rsh_removed: true
-package_rsh_server_removed: true
 package_sendmail_removed: true
-package_talk_removed: true
-package_talk_server_removed: true
 package_telnet_removed: true
 package_telnet_server_removed: true
 package_tftp_removed: true

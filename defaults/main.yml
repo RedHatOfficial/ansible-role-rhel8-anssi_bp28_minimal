@@ -19,7 +19,6 @@ var_password_pam_unix_rounds: '65536'
 DISA_STIG_RHEL_08_010019: true
 DISA_STIG_RHEL_08_010159: true
 DISA_STIG_RHEL_08_010190: true
-DISA_STIG_RHEL_08_010370: true
 DISA_STIG_RHEL_08_010371: true
 DISA_STIG_RHEL_08_010700: true
 DISA_STIG_RHEL_08_020011: true
@@ -39,6 +38,7 @@ DISA_STIG_RHEL_08_020280: true
 DISA_STIG_RHEL_08_040000: true
 DISA_STIG_RHEL_08_040002: true
 DISA_STIG_RHEL_08_040190: true
+DISA_STIG_needed_rules: true
 accounts_password_minlen_login_defs: true
 accounts_password_pam_dcredit: true
 accounts_password_pam_lcredit: true

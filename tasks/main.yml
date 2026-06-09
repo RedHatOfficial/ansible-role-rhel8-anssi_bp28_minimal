@@ -78,7 +78,7 @@
   - no_reboot_needed
   - package_sendmail_removed
 
-- name: 'Uninstall xinetd Package: Ensure xinetd is removed'
+- name: 'Uninstall xinetd package if not used by network services: Ensure xinetd is removed'
   ansible.builtin.package:
     name: xinetd
     state: absent
